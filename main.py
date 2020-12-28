@@ -53,7 +53,7 @@ def normalization(data_test, batchi):
 ########################
 ####### Run Test #######
 ########################
-def process(data_test, batchi):
+def process(data_test, data_name, batchi):
 	#if torch.cuda.is_available:device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 	#device = torch.device('cpu')
 	#print("Device again: " + str(device))
@@ -62,6 +62,9 @@ def process(data_test, batchi):
 		testx = data_test.to(device)
 		outputs_test = bmodel(testx)
 		np.savetxt('me_output/ba_' + str(batchi) + '.txt', outputs_test.max(dim=1).indices.int().data.cpu().numpy())
+		with open('me_output/baName_' + str(batchi) + '.txt', 'w') as f:
+			for item in data_name:
+				f.write("%s\n" % item)
 		print("[Step 3]$$$$$$$$$$ DONE processing with batch "+ str(batchi))
 		print(outputs_test.shape)
 		del outputs_test
@@ -74,35 +77,40 @@ def process(data_test, batchi):
 batchsize = 1
 f5path = '../fast5'
 
+
 j = 0
-def get_raw_data(fileNM, data_test):
+def get_raw_data(fileNM, data_test, data_name):
 	fast5_filepath = os.path.join(f5path, fileNM)
 	with get_fast5_file(fast5_filepath, mode="r") as f5:
 		for read in f5.get_reads():
 			raw_data = read.get_raw_data(scale=True)
-			if len(raw_data) > 5000:
-				data_test.append(raw_data[2000:5000])
+			if len(raw_data) >= 4000:
+				data_test.append(raw_data[1000:4000])
+				data_name.append(read.read_id)
 				j += 1
-	return data_test
+	return data_test, data_name
 
 directory = os.fsencode(f5path)
 data_test = []
+data_name = []
 batchi = 0
 it = 0
 for file in os.listdir(directory):
 	filename = os.fsdecode(file)
 	if filename.endswith(".fast5"): 
-		data_test = get_raw_data(filename, data_test)
+		data_test, data_name = get_raw_data(filename, data_test, data_name)
 		it += 1
 
 		if it == batchsize:
 			print("[Step 1]$$$$$$$$$$ Done loading data with batch " + str(batchi)+ ", Getting " + str(len(data_test)) + " of sequences...")
 			data_test = normalization(data_test, batchi)
-			process(data_test, batchi)
+			process(data_test, data_name, batchi)
 			print("[Step 4]$$$$$$$$$$ Done with batch ")
 			print()
 			del data_test
 			data_test = []
+			del data_name
+			data_name = []
 			batchi += 1
 			it = 0
 
