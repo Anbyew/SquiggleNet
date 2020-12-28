@@ -9,6 +9,7 @@ from torch.nn import functional as F
 from scipy import stats
 from ont_fast5_api.fast5_interface import get_fast5_file
 from model import ResNet
+from model import Bottleneck
 
 import numpy as np
 import os
@@ -19,7 +20,7 @@ print("Device: " + str(device))
 
 
 ### load model
-tpname = 'model_B4_2_3000_totmad_br_2.ckpt'
+tpname = 'models/model_B4_2_3000_totmad_br_2.ckpt'
 bmodel = ResNet(Bottleneck, [2,2,2,2]).to(device).eval()
 tpp = torch.load(os.path.join('', tpname),  map_location=device)
 bmodel.load_state_dict(tpp)
@@ -61,10 +62,10 @@ def process(data_test, data_name, batchi):
 	with torch.no_grad():
 		testx = data_test.to(device)
 		outputs_test = bmodel(testx)
-		np.savetxt('me_output/ba_' + str(batchi) + '.txt', outputs_test.max(dim=1).indices.int().data.cpu().numpy())
-		with open('me_output/baName_' + str(batchi) + '.txt', 'w') as f:
-			for item in data_name:
-				f.write("%s\n" % item)
+		#np.savetxt('output/ba_' + str(batchi) + '.txt', outputs_test.max(dim=1).indices.int().data.cpu().numpy())
+		with open('output/ba_' + str(batchi) + '.txt', 'w') as f:
+			for nm, val in zip(data_name, outputs_test.max(dim=1).indices.int().data.cpu().numpy()):
+				f.write(nm + '\t' + str(val))
 		print("[Step 3]$$$$$$$$$$ DONE processing with batch "+ str(batchi))
 		print(outputs_test.shape)
 		del outputs_test
@@ -78,7 +79,6 @@ batchsize = 1
 f5path = '../fast5'
 
 
-j = 0
 def get_raw_data(fileNM, data_test, data_name):
 	fast5_filepath = os.path.join(f5path, fileNM)
 	with get_fast5_file(fast5_filepath, mode="r") as f5:
@@ -87,7 +87,6 @@ def get_raw_data(fileNM, data_test, data_name):
 			if len(raw_data) >= 4000:
 				data_test.append(raw_data[1000:4000])
 				data_name.append(read.read_id)
-				j += 1
 	return data_test, data_name
 
 directory = os.fsencode(f5path)

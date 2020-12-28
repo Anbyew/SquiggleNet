@@ -1,3 +1,4 @@
+import torch
 from torch.optim import Adam
 from torch.nn import CrossEntropyLoss
 from torch import nn
