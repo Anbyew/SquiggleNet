@@ -1,16 +1,13 @@
+import os
+import click
 import torch
 from torch.utils.data import DataLoader
 from torch.optim import Adam
 from torch.nn import CrossEntropyLoss
 from torch.nn import functional as F
 
-import os
-from sklearn.metrics import roc_auc_score
-
-
 if torch.cuda.is_available:device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
-
 
 
 # Parameters
@@ -27,25 +24,22 @@ zm_val = "zymo_val_totmad_4_20000.pt"
 hl_val = "hela_val_totmad_4_20000.pt"
 
 training_set = Dataset(zm_train, hl_train)
-training_generator = DataLoader(training_set, **params)
+training_generator = DataLoader(training_set, **params1)
 
 validation_set = Dataset(zm_val, hl_val)
-validation_generator = DataLoader(validation_set, **params)
+validation_generator = DataLoader(validation_set, **params1)
+
+zymo_train = torch.load(os.path.join(data_path, zm_train))
+hela_train = torch.load(os.path.join(data_path, hl_train))
 
 zymo_val = torch.load(os.path.join(data_path, zm_val))
 hela_val = torch.load(os.path.join(data_path, hl_val))
 
-data_val = torch.cat((zymo_val, hela_val))
-print("Total validation data shape: " + str(data_val.shape))
-y_val = torch.cat((torch.zeros(zymo_val.shape[0]), torch.ones(hela_val.shape[0]))) #human: 1, others: 0
-print("Total validation label shape: " + str(y_val.shape))
-
 
 def solver(learning_rate=1e-3):
   model = ResNet(Bottleneck, [2,2,2,2]).to(device)
-  # tpp = torch.load(os.path.join(model_path, "model_all_991_tmp_999_11.ckpt"))
+  # tpp = torch.load(os.path.join(model_path, "model_crona_1.ckpt"))
   # model.load_state_dict(tpp)
-
 
   criterion = nn.CrossEntropyLoss().to(device)
   optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -65,21 +59,26 @@ def solver(learning_rate=1e-3):
         loss = criterion(outputs, spy)
         acc = 100.0 * (spy == outputs.max(dim=1).indices).float().mean().item()
 
-        with torch.no_grad():
-          valx = data_val.to(device)
-          valy = y_val.to(torch.long).to(device)
-          outputs_val = model(valx)
-          acc_v = 100.0 * (valy == outputs_val.max(dim=1).indices).float().mean().item()
-          auroc = roc_auc_score(valy.cpu(), outputs_val.max(dim=1).indices.cpu())
-          if bestacc < auroc:
-              bestacc = auroc
-              bestmd = model
-              torch.save(bestmd.state_dict(), os.path.join(model_path, "model_all_991_tmp_999_11.ckpt"))
-          i += 1
-          if i%100 == 0:
-            print("epoch: " + str(epoch) + ", i: " + str(i) + ", bestauroc: " + str(bestacc) + ", curauroc: " + str(auroc) + ", acc: " + str(acc_v))
-
+        # Validation
+        with torch.set_grad_enabled(False):
+            acc_vt = 0
+            vti = 0
+            for valx, valy in validation_generator:
+                valx, valy = valx.to(device), valy.to(device)
+                outputs_val = model(valx)
+                acc_v = 100.0 * (valy == outputs_val.max(dim=1).indices).float().mean().item()
+                vti += 1
+                acc_vt += acc_v
+            acc_vt = acc_vt / vti
+            if bestacc < acc_vt:
+                bestacc = acc_vt
+                bestmd = model
+                torch.save(bestmd.state_dict(), os.path.join(model_path, "model_crona_v2_1.ckpt"))
+        
+            print("epoch: " + str(epoch) + ", i: " + str(i) + ", bestacc: " + str(bestacc) + ", curacc: " + str(acc_vt) + \
+                  ", trainacc: " + str(acc) + ", loss: " + str(loss.cpu()))
             i += 1
+        
         # Backward and optimize
         optimizer.zero_grad()
         loss.backward()
@@ -87,6 +86,16 @@ def solver(learning_rate=1e-3):
 
   return bestacc, bestmd
 
+@click.command()
+@click.option('--tTrain', '-tt', help='The path of target sequence training set', type=click.Path(exists=True))
+@click.option('--tVal', '-tv', help='The path of target sequence validation set', type=click.Path(exists=True))
+@click.option('--nTrain', '-nt', help='The path of non-target sequence training set', type=click.Path(exists=True))
+@click.option('--nVal', '-nv', help='The path of non-target sequence validation set', type=click.Path(exists=True))
+@click.option('--outpath', '-o', help='The output path and name for the best trained model')
+@click.option('--interm', '-i', help='The path and name for model checkpoint (optional)', type=click.Path(exists=True))
 
 
-bestacc, bestmd = solver()
+def main(tTrain, tVal, nTrain, nVal, outpath, interm):
+
+if __name__ == '__main__':
+  main()
