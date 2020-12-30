@@ -20,7 +20,7 @@ print("Device: " + str(device))
 
 
 ### load model
-tpname = 'models/model_B4_2_3000_totmad_br_2.ckpt'
+tpname = 'models/model_B4t2_3000_tot32.ckpt'
 bmodel = ResNet(Bottleneck, [2,2,2,2]).to(device).eval()
 tpp = torch.load(os.path.join('', tpname),  map_location=device)
 bmodel.load_state_dict(tpp)
@@ -62,10 +62,9 @@ def process(data_test, data_name, batchi):
 	with torch.no_grad():
 		testx = data_test.to(device)
 		outputs_test = bmodel(testx)
-		#np.savetxt('output/ba_' + str(batchi) + '.txt', outputs_test.max(dim=1).indices.int().data.cpu().numpy())
 		with open('output/ba_' + str(batchi) + '.txt', 'w') as f:
 			for nm, val in zip(data_name, outputs_test.max(dim=1).indices.int().data.cpu().numpy()):
-				f.write(nm + '\t' + str(val))
+				f.write(nm + '\t' + str(val)+'\n')
 		print("[Step 3]$$$$$$$$$$ DONE processing with batch "+ str(batchi))
 		print(outputs_test.shape)
 		del outputs_test
