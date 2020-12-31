@@ -1,69 +1,91 @@
 from ont_fast5_api.fast5_interface import get_fast5_file
 import os
-import numpy as np
 import glob
-
-my_file_pos = open("gt_pos.txt", "r")
-posli = my_file_pos.readlines()
-my_file_pos.close()
-posli = [pi.split('\n')[0] for pi in posli]
-
-my_file_neg = open("gt_neg.txt", "r")
-negli = my_file_neg.readlines()
-my_file_neg.close()
-negli = [pi.split('\n')[0] for pi in negli]
+import click
+import torch
+import numpy as np
+from scipy import stats
 
 
-print("##### posli and negli length")
-print(len(posli))
-print(len(negli))
-print()
+#python preprocess.py -gp ../../Downloads/1000_4000/gt_zymo.txt -gn ../../Downloads/1000_4000/gt_hela.txt -i ../../Downloads/fast5 -o out
 
-arr = []
-arrpos = []
-name_pos = []
-name_neg = []
-i = 0
-pi = 0
 
-for fileNM in glob.glob('fast5/*.fast5'):
-	with get_fast5_file(fileNM, mode="r") as f5:
-		print("##### file: " + fileNM)
-		for read in f5.get_reads():
-			raw_data = read.get_raw_data(scale=True)
-			if len(raw_data) >= 4500:
-				if read.read_id in posli:
-					pi += 1
-					name_pos.append(read.read_id)
-					arrpos.append(raw_data[1500:4500])
-					if (pi%1000 == 0) and (pi != 0):
-						print("##### 1000 pi: " + str(pi))
-						print(np.array(arrpos).shape)
-						print()
-						np.save('npy/pos_' + str(pi), np.array(arrpos))
-						with open('npy/name_pos_' + str(pi) + '.txt', 'w') as f:
-							for item in name_pos:
-								f.write("%s\n" % item)
+def normalization(data_test, xi, outpath, pos = True):
+	mad = stats.median_abs_deviation(data_test, axis=1, scale='normal')
+	m = np.median(data_test, axis=1)   
+	data_test = ((data_test - np.expand_dims(m,axis=1))*1.0) / (1.4826 * np.expand_dims(mad,axis=1))
 
-						del arrpos
-						del name_pos
-						arrpos = []
-						name_pos = []
+	x = np.where(np.abs(data_test) > 3.5)
+	for i in range(x[0].shape[0]):
+		if x[1][i] == 0:
+			data_test[x[0][i],x[1][i]] = data_test[x[0][i],x[1][i]+1]
+		elif x[1][i] == 2999:
+			data_test[x[0][i],x[1][i]] = data_test[x[0][i],x[1][i]-1]
+		else:
+			data_test[x[0][i],x[1][i]] = (data_test[x[0][i],x[1][i]-1] + data_test[x[0][i],x[1][i]+1])/2
 
-				if read.read_id in negli:
-					i += 1
-					name_neg.append(read.read_id)
-					arr.append(raw_data[1500:4500])
-					if (i%1000 == 0) and (i != 0):
-						print("##### 1000 i: " + str(i))
-						print(np.array(arr).shape)
-						print()
-						np.save('npy/neg_' + str(i), np.array(arr))
-						with open('npy/name_neg_' + str(i) + '.txt', 'w') as f:
-							for item in name_neg:
-								f.write("%s\n" % item)
+	data_test = torch.tensor(data_test).float()
+	if pos is True:
+		torch.save(torch.tensor(data_test).float(), outpath + '/pos_' + str(xi) + '.pt')
+	else:
+		torch.save(torch.tensor(data_test).float(), outpath + '/neg_' + str(xi) + '.pt')
 
-						del arr
-						del name_neg
-						arr = []
-						name_neg = []
+@click.command()
+@click.option('--gtPos', '-gp', help='Ground truth list of positive read IDs')
+@click.option('--gtNeg', '-gn', help='Ground trueh list of negative read IDs')
+@click.option('--inpath', '-i', help='The input fast5 directory path')
+@click.option('--outpath', '-o', help='The output pytorch tensor directory path')
+@click.option('--batch', '-b', default=10000, help='Batch size, default 10000')
+@click.option('--cutoff', '-c', default=1500, help='Cutoff the first c signals')
+
+def main(gtpos, gtneg, inpath, outpath, batch, cutoff):
+	### read in pos and neg ground truth variables
+	my_file_pos = open(gtpos, "r")
+	posli = my_file_pos.readlines()
+	my_file_pos.close()
+	posli = [pi.split('\n')[0] for pi in posli]
+
+	my_file_neg = open(gtneg, "r")
+	negli = my_file_neg.readlines()
+	my_file_neg.close()
+	negli = [pi.split('\n')[0] for pi in negli]
+
+
+	print("##### posli and negli length")
+	print(len(posli))
+	print(len(negli))
+	print()
+
+	### split fast5 files
+	arrneg = []
+	arrpos = []
+	pi = 0
+	ni = 0
+	
+	for fileNM in glob.glob(inpath + '/*.fast5'):
+		with get_fast5_file(fileNM, mode="r") as f5:
+			print("##### file: " + fileNM)
+			for read in f5.get_reads():
+				raw_data = read.get_raw_data(scale=True)
+
+				### only parse reads that are long enough
+				if len(raw_data) >= (cutoff + 3000):
+					if read.read_id in posli:
+						pi += 1
+						arrpos.append(raw_data[cutoff:(cutoff + 3000)])
+						if (pi%batch == 0) and (pi != 0):
+							normalization(arrpos, pi, outpath, pos = True)
+							del arrpos
+							arrpos = []
+
+					if read.read_id in negli:
+						ni += 1
+						arrneg.append(raw_data[cutoff:(cutoff + 3000)])
+						if (ni%batch == 0) and (ni != 0):
+							normalization(arrneg, ni, outpath, pos = False)
+							del arrneg
+							arrneg = []
+
+
+if __name__ == '__main__':
+	main()

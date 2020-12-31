@@ -2,6 +2,7 @@ import time
 import torch
 import click
 import os
+import glob
 import numpy as np
 from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
@@ -74,7 +75,7 @@ def get_raw_data(infile, fileNM, data_test, data_name, cutoff):
 @click.option('--infile', '-i', help='The input fast5 folder path', type=click.Path(exists=True))
 @click.option('--outfile', '-o', help='The output result folder path', type=click.Path())
 @click.option('--batch', '-b', default=1, help='Batch size')
-@click.option('--cutoff', '-c', default=1, help='Cutoff the first c signals')
+@click.option('--cutoff', '-c', default=1500, help='Cutoff the first c signals')
 
 def main(model, infile, outfile, batch, cutoff):
 	start_time = time.time()
@@ -96,25 +97,23 @@ def main(model, infile, outfile, batch, cutoff):
 	data_name = []
 	batchi = 0
 	it = 0
-	for file in os.listdir(os.fsencode(infile)):
-		filename = os.fsdecode(file)
-		if filename.endswith(".fast5"): 
-			data_test, data_name = get_raw_data(infile, filename, data_test, data_name, cutoff)
-			it += 1
+	for fileNM in glob.glob(infile + '/*.fast5'):
+		data_test, data_name = get_raw_data(infile, fileNM, data_test, data_name, cutoff)
+		it += 1
 
-			if it == batch:
-				print("[Step 1]$$$$$$$$$$ Done loading data with batch " + str(batchi)+ \
-					", Getting " + str(len(data_test)) + " of sequences")
-				data_test = normalization(data_test, batchi)
-				process(data_test, data_name, batchi, bmodel, outfile, device)
-				print("[Step 4]$$$$$$$$$$ Done with batch " + str(batchi))
-				print()
-				del data_test
-				data_test = []
-				del data_name
-				data_name = []
-				batchi += 1
-				it = 0
+		if it == batch:
+			print("[Step 1]$$$$$$$$$$ Done loading data with batch " + str(batchi)+ \
+				", Getting " + str(len(data_test)) + " of sequences")
+			data_test = normalization(data_test, batchi)
+			process(data_test, data_name, batchi, bmodel, outfile, device)
+			print("[Step 4]$$$$$$$$$$ Done with batch " + str(batchi))
+			print()
+			del data_test
+			data_test = []
+			del data_name
+			data_name = []
+			batchi += 1
+			it = 0
 
 	print("[Step FINAL]--- %s seconds ---" % (time.time() - start_time))
 
