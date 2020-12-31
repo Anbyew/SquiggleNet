@@ -3,9 +3,14 @@ import click
 import torch
 from torch.utils.data import DataLoader
 from torch.optim import Adam
+from torch import nn
 from torch.nn import CrossEntropyLoss
 from torch.nn import functional as F
+from dataset import Dataset
+from model import ResNet
+from model import Bottleneck
 
+#python trainer.py -tt out/pos_100.pt -nt out/neg_100.pt -tv out/pos_200.pt -nv out/neg_200.pt -o o2
 
 @click.command()
 @click.option('--tTrain', '-tt', help='The path of target sequence training set', type=click.Path(exists=True))
@@ -19,7 +24,7 @@ from torch.nn import functional as F
 @click.option('--epoch', '-e', default=20, help='Number of epoches, default 20')
 @click.option('--learningrate', '-l', default=1e-3, help='Learning rate, default 1e-3')
 
-def main(tTrain, tVal, nTrain, nVal, outpath, interm, batch, epoch, learningrate):
+def main(ttrain, tval, ntrain, nval, outpath, interm, batch, epoch, learningrate):
 	if torch.cuda.is_available:device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 	print(device)
 
@@ -29,17 +34,17 @@ def main(tTrain, tVal, nTrain, nVal, outpath, interm, batch, epoch, learningrate
 				'num_workers': 10}
 
 	### load files
-	training_set = Dataset(tTrain, nTrain)
+	training_set = Dataset(ttrain, ntrain)
 	training_generator = DataLoader(training_set, **params)
 
-	validation_set = Dataset(tVal, nVal)
+	validation_set = Dataset(tval, nval)
 	validation_generator = DataLoader(validation_set, **params)
 
-	zymo_train = torch.load(os.path.join(data_path, tTrain))
-	hela_train = torch.load(os.path.join(data_path, nTrain))
+	zymo_train = torch.load(ttrain)
+	hela_train = torch.load(ntrain)
 
-	zymo_val = torch.load(os.path.join(data_path, tVal))
-	hela_val = torch.load(os.path.join(data_path, nVal))
+	zymo_val = torch.load(tval)
+	hela_val = torch.load(nval)
 
 	### load model
 	model = ResNet(Bottleneck, [2,2,2,2]).to(device)
@@ -47,7 +52,7 @@ def main(tTrain, tVal, nTrain, nVal, outpath, interm, batch, epoch, learningrate
 		model.load_state_dict(torch.load(interm))
 
 	criterion = nn.CrossEntropyLoss().to(device)
-	optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+	optimizer = torch.optim.Adam(model.parameters(), lr=learningrate)
 
 	bestacc = 0
 	bestmd = None

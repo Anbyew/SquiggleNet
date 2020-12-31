@@ -50,6 +50,10 @@ def main(gtpos, gtneg, inpath, outpath, batch, cutoff):
 	my_file_neg.close()
 	negli = [pi.split('\n')[0] for pi in negli]
 
+	### make output folder
+	if not os.path.exists(outpath):
+		os.makedirs(outpath)
+
 
 	print("##### posli and negli length")
 	print(len(posli))

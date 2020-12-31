@@ -3,8 +3,8 @@ from torch.utils.data.dataset import Dataset
 
 class Dataset(torch.utils.data.Dataset):
   def __init__(self, zmFile, hlFile):
-        z = torch.load(os.path.join(data_path, zmFile))
-        h = torch.load(os.path.join(data_path, hlFile))
+        z = torch.load(zmFile)
+        h = torch.load(hlFile)
         self.data = torch.cat((z, h))
         self.label = torch.cat((torch.zeros(z.shape[0]), torch.ones(h.shape[0]))) #human: 1, others: 0
 
