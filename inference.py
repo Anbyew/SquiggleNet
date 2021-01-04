@@ -15,7 +15,6 @@ from ont_fast5_api.fast5_interface import get_fast5_file
 from model import ResNet
 from model import Bottleneck
 
-#python inference.py -m models/model_B4t2_3000_tot32.ckpt -i ../../Downloads/fast5 -o out
 
 ########################
 ##### Normalization ####

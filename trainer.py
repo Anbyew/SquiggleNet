@@ -10,7 +10,6 @@ from dataset import Dataset
 from model import ResNet
 from model import Bottleneck
 
-#python trainer.py -tt out/pos_100.pt -nt out/neg_100.pt -tv out/pos_200.pt -nv out/neg_200.pt -o o2.ckpt
 
 @click.command()
 @click.option('--tTrain', '-tt', help='The path of target sequence training set', type=click.Path(exists=True))

@@ -7,9 +7,6 @@ import numpy as np
 from scipy import stats
 
 
-#python preprocess.py -gp ../../Downloads/1000_4000/gt_zymo.txt -gn ../../Downloads/1000_4000/gt_hela.txt -i ../../Downloads/fast5 -o out
-
-
 def normalization(data_test, xi, outpath, pos = True):
 	mad = stats.median_abs_deviation(data_test, axis=1, scale='normal')
 	m = np.median(data_test, axis=1)   
