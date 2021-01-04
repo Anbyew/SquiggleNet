@@ -78,7 +78,7 @@ python trainer.py -tt outfolder/pos_train.pt -nt outfolder/neg_train.pt -tv outf
 ```
 
 ## Contributing
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change. For further questions, please contact yuweibao@umich.edu.
 
 
 ## License
