@@ -1,4 +1,5 @@
-<img align="left" width="90" height="80" src="imgs/SquiggleNet.png" alt="SquiggleNet"> 
+<img align="right" width="220" height="180" src="imgs/SquiggleNet.png" alt="SquiggleNet logo"> 
+
 # SquiggleNet
 
 SquiggleNet is a 1D ResNet based model to classify Oxford Nanopore raw electrical signals as target or non-target for Read-Until sequence enrichment or depletion. 
