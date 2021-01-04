@@ -12,8 +12,7 @@ from ont_fast5_api.fast5_interface import get_fast5_file
 
 import numpy as np
 import os
-import matplotlib.pyplot as plt
-from matplotlib.pyplot import figure
+
 
 #device = torch.device('cpu')
 #device = torch.device('cuda:0')
