@@ -4,6 +4,13 @@
 
 SquiggleNet is a 1D ResNet based model to classify Oxford Nanopore raw electrical signals as target or non-target for Read-Until sequence enrichment or depletion. 
 
+# Preprint
+Real-Time, Direct Classification of Nanopore Signals with SquiggleNet
+Yuwei Bao, Jack Wadden, John R. Erb-Downward, Piyush Ranjan, Robert P. Dickson, David Blaauw, Joshua D. Welch
+bioRxiv 2021.01.15.426907; doi: https://doi.org/10.1101/2021.01.15.426907
+
+https://www.biorxiv.org/content/10.1101/2021.01.15.426907v1
+
 ## Package Requirements
 
 - Python >= 3.7
